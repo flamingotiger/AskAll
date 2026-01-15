@@ -1,0 +1,81 @@
+:root {
+  color-scheme: light;
+  --bg: #f7f5f0;
+  --ink: #1f1b16;
+  --accent: #0f766e;
+  --accent-ink: #ffffff;
+  --muted: #6b6057;
+  --border: #e2d7cc;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 14px/1.4 "Georgia", "Times New Roman", serif;
+  min-width: 320px;
+}
+
+.wrap {
+  padding: 14px 14px 16px;
+}
+
+h1 {
+  margin: 0 0 8px;
+  font-size: 18px;
+  letter-spacing: 0.2px;
+}
+
+.label {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--muted);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+
+textarea {
+  width: 100%;
+  min-height: 96px;
+  resize: vertical;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: #fff;
+  color: var(--ink);
+  font: 14px/1.4 "Georgia", "Times New Roman", serif;
+  outline: none;
+}
+
+textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(15, 118, 110, 0.15);
+}
+
+button {
+  width: 100%;
+  margin-top: 10px;
+  padding: 10px 12px;
+  border: none;
+  border-radius: 8px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+button[disabled] {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.status {
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: 12px;
+}

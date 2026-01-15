@@ -1,0 +1,30 @@
+{
+  "manifest_version": 3,
+  "name": "AskAll",
+  "version": "0.1.0",
+  "description": "Send one question to ChatGPT, Claude, and Perplexity tabs at once.",
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "AskAll"
+  },
+  "permissions": ["tabs", "scripting", "activeTab", "storage"],
+  "host_permissions": [
+    "https://chat.openai.com/*",
+    "https://claude.ai/*",
+    "https://www.perplexity.ai/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://chat.openai.com/*",
+        "https://claude.ai/*",
+        "https://www.perplexity.ai/*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "icons": {
+    "128": "icon.png"
+  }
+}
