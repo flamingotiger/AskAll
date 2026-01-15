@@ -6,7 +6,7 @@ Ask a single question and send it to your ChatGPT, Claude, and Perplexity tabs a
 1. Open Chrome and go to `chrome://extensions`.
 2. Enable **Developer mode** (top-right).
 3. Click **Load unpacked**.
-4. Select the `askall-extension` folder.
+4. Select the `AskAll` folder.
 
 ## How to use
 1. Open each site in its own tab:
@@ -18,9 +18,10 @@ Ask a single question and send it to your ChatGPT, Claude, and Perplexity tabs a
 4. Check the status line for success/fail counts.
 
 ## Supported sites
-- https://chat.openai.com/*
+- https://chatgpt.com/*
 - https://claude.ai/*
 - https://www.perplexity.ai/*
+- https://gemini.google.com/*
 
 ## Notes / Limitations
 - Each site may change its UI or DOM structure; if sending stops working, update the selectors in `content.js`.

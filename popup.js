@@ -1,24 +1,76 @@
 const sendBtn = document.getElementById("sendBtn");
 const questionEl = document.getElementById("question");
 const statusEl = document.getElementById("status");
+const DRAFT_KEY = "askall_draft";
+const TARGETS_KEY = "askall_targets";
+
+const targetEls = {
+  chatgpt: document.getElementById("target-chatgpt"),
+  claude: document.getElementById("target-claude"),
+  perplexity: document.getElementById("target-perplexity"),
+  gemini: document.getElementById("target-gemini")
+};
 
 const TARGET_URLS = [
-  "https://chat.openai.com/*",
+  "https://chatgpt.com/*",
   "https://claude.ai/*",
-  "https://www.perplexity.ai/*"
+  "https://www.perplexity.ai/*",
+  "https://gemini.google.com/*"
 ];
+
+const TARGET_MAP = {
+  chatgpt: "https://chatgpt.com/*",
+  claude: "https://claude.ai/*",
+  perplexity: "https://www.perplexity.ai/*",
+  gemini: "https://gemini.google.com/*"
+};
 
 function setStatus(successCount, failCount) {
   statusEl.textContent = `Success: ${successCount} / Fail: ${failCount}`;
 }
 
+function selectedTargets() {
+  return Object.keys(targetEls).filter((key) => targetEls[key].checked);
+}
+
+function saveTargets() {
+  const selected = selectedTargets();
+  chrome.storage.local.set({ [TARGETS_KEY]: selected });
+}
+
+function loadTargets() {
+  chrome.storage.local.get([TARGETS_KEY], (res) => {
+    const saved = Array.isArray(res[TARGETS_KEY]) ? res[TARGETS_KEY] : [];
+    const defaults = saved.length ? saved : Object.keys(targetEls);
+    Object.keys(targetEls).forEach((key) => {
+      targetEls[key].checked = defaults.includes(key);
+    });
+  });
+}
+
+function saveDraft(value) {
+  chrome.storage.local.set({ [DRAFT_KEY]: value });
+}
+
+function loadDraft() {
+  chrome.storage.local.get([DRAFT_KEY], (res) => {
+    const draft = typeof res[DRAFT_KEY] === "string" ? res[DRAFT_KEY] : "";
+    if (draft) questionEl.value = draft;
+  });
+}
+
 async function queryTargetTabs() {
-  return chrome.tabs.query({ url: TARGET_URLS });
+  const selected = selectedTargets();
+  const urls = selected.length
+    ? selected.map((key) => TARGET_MAP[key]).filter(Boolean)
+    : TARGET_URLS;
+  return chrome.tabs.query({ url: urls });
 }
 
 async function sendToTab(tabId, text) {
   return new Promise((resolve) => {
     chrome.tabs.sendMessage(tabId, { type: "ASKALL_SEND", text }, (resp) => {
+      console.log("🚀 ~ sendToTab ~ resp:", resp)
       if (chrome.runtime.lastError) {
         resolve({ ok: false, reason: chrome.runtime.lastError.message });
         return;
@@ -47,6 +99,12 @@ sendBtn.addEventListener("click", async () => {
   let failCount = 0;
 
   try {
+    const selected = selectedTargets();
+    if (!selected.length) {
+      setStatus(0, 0);
+      return;
+    }
+
     const tabs = await queryTargetTabs();
     if (!tabs.length) {
       setStatus(0, 0);
@@ -67,3 +125,14 @@ sendBtn.addEventListener("click", async () => {
     sendBtn.textContent = originalLabel;
   }
 });
+
+questionEl.addEventListener("input", () => {
+  saveDraft(questionEl.value);
+});
+
+Object.values(targetEls).forEach((el) => {
+  el.addEventListener("change", saveTargets);
+});
+
+loadDraft();
+loadTargets();

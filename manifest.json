@@ -9,16 +9,18 @@
   },
   "permissions": ["tabs", "scripting", "activeTab", "storage"],
   "host_permissions": [
-    "https://chat.openai.com/*",
+    "https://chatgpt.com/*",
     "https://claude.ai/*",
-    "https://www.perplexity.ai/*"
+    "https://www.perplexity.ai/*",
+    "https://gemini.google.com/*"
   ],
   "content_scripts": [
     {
       "matches": [
-        "https://chat.openai.com/*",
+        "https://chatgpt.com/*",
         "https://claude.ai/*",
-        "https://www.perplexity.ai/*"
+        "https://www.perplexity.ai/*",
+        "https://gemini.google.com/*"
       ],
       "js": ["content.js"],
       "run_at": "document_idle"

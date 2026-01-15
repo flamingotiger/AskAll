@@ -11,6 +11,13 @@
       <h1>AskAll</h1>
       <label class="label" for="question">Question</label>
       <textarea id="question" placeholder="Type your question..."></textarea>
+      <div class="targets">
+        <div class="label">Targets</div>
+        <label class="check"><input type="checkbox" id="target-chatgpt" /> ChatGPT</label>
+        <label class="check"><input type="checkbox" id="target-claude" /> Claude</label>
+        <label class="check"><input type="checkbox" id="target-perplexity" /> Perplexity</label>
+        <label class="check"><input type="checkbox" id="target-gemini" /> Gemini</label>
+      </div>
       <button id="sendBtn">Send to all</button>
       <div id="status" class="status">Success: 0 / Fail: 0</div>
     </div>

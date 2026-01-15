@@ -57,6 +57,31 @@ textarea:focus {
   box-shadow: 0 0 0 2px rgba(15, 118, 110, 0.15);
 }
 
+.targets {
+  margin-top: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.targets .label {
+  margin: 0 0 6px;
+}
+
+.check {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin: 4px 0;
+  font-size: 13px;
+  color: var(--ink);
+}
+
+.check input {
+  margin: 0;
+}
+
 button {
   width: 100%;
   margin-top: 10px;
