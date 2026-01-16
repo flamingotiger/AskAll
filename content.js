@@ -1,10 +1,12 @@
 const RETRY_COUNT = 4;
 const RETRY_DELAY_MS = 300;
 
+// Promise-based delay for retry/backoff flows.
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+// Basic visibility check for interactive candidates.
 function isVisible(el) {
   if (!el) return false;
   const rect = el.getBoundingClientRect();
@@ -14,6 +16,7 @@ function isVisible(el) {
   return true;
 }
 
+// Choose the largest visible element by area.
 function pickLargest(els) {
   let best = null;
   let bestArea = 0;
@@ -29,9 +32,10 @@ function pickLargest(els) {
   return best;
 }
 
+// Find the best input candidate using site-specific then generic heuristics.
 function findInputCandidate() {
   const host = window.location.host;
-  if (host.includes("chat.openai.com") || host.includes("chatgpt.com")) {
+  if (host.includes("chatgpt.com")) {
     const gptEl =
       document.querySelector("#prompt-textarea") ||
       document.querySelector("[data-testid='prompt-textarea']") ||
@@ -80,6 +84,7 @@ function findInputCandidate() {
   return null;
 }
 
+// Dispatch an input event that many editors listen for.
 function dispatchInputEvent(el) {
   try {
     el.dispatchEvent(
@@ -94,6 +99,7 @@ function dispatchInputEvent(el) {
   }
 }
 
+// Best-effort beforeinput to satisfy editors requiring it.
 function dispatchBeforeInputEvent(el, text) {
   try {
     el.dispatchEvent(
@@ -109,6 +115,7 @@ function dispatchBeforeInputEvent(el, text) {
   }
 }
 
+// Move caret to the end of a contenteditable element.
 function moveCaretToEnd(el) {
   try {
     const range = document.createRange();
@@ -124,6 +131,7 @@ function moveCaretToEnd(el) {
   }
 }
 
+// Insert text into textarea/input/contenteditable with editor-friendly events.
 function setText(el, kind, text) {
   el.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
   el.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
@@ -139,26 +147,34 @@ function setText(el, kind, text) {
   if (kind === "contenteditable") {
     const isGeminiEditor =
       window.location.host.includes("gemini.google.com") &&
-      (el.classList.contains("ql-editor") || el.closest("rich-textarea"));
+      (el.classList.contains("ql-editor") || el.closest("rich-textarea")); 
+
     dispatchBeforeInputEvent(el, text);
     let inserted = false;
-    if (typeof document.execCommand === "function") {
+    const isPerplexityEditor = window.location.host.includes("perplexity.ai");
+    if (!isPerplexityEditor && typeof document.execCommand === "function") {
+      console.log("🚀 1")
       try {
         document.execCommand("selectAll", false, null);
         inserted = document.execCommand("insertText", false, text);
+        console.log("🚀 2")
       } catch (_err) {
+        console.log("🚀 3")
         inserted = false;
       }
     }
-
+    
     if (!inserted) {
+      console.log("🚀 4")
       const p = document.createElement("p");
       p.textContent = text;
       if (isGeminiEditor) {
+        console.log("🚀 5")
         // Quill editors expect a <p> inside the contenteditable container.
         el.innerHTML = "";
         el.appendChild(p);
       } else {
+        console.log("🚀 6");
         el.replaceChildren(p);
       }
     }
@@ -167,9 +183,12 @@ function setText(el, kind, text) {
     dispatchInputEvent(el);
     el.dispatchEvent(new Event("change", { bubbles: true }));
     el.dispatchEvent(new KeyboardEvent("keyup", { key: "Enter", bubbles: true }));
+    el.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+    el.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
   }
 }
 
+// Poll for an enabled send button within a small retry window.
 async function waitForSendButton(startEl, attempts, delayMs) {
   for (let i = 0; i < attempts; i += 1) {
     const btn = findSendButton(startEl);
@@ -181,6 +200,7 @@ async function waitForSendButton(startEl, attempts, delayMs) {
   return null;
 }
 
+// Check localized send keywords.
 function hasSendKeyword(label) {
   const normalized = label.toLowerCase().trim();
   const keywords = [
@@ -193,6 +213,7 @@ function hasSendKeyword(label) {
   return keywords.some((k) => normalized.includes(k));
 }
 
+// Identify send buttons by label/test id.
 function matchesSendLabel(el) {
   const label =
     (el.getAttribute("aria-label") ||
@@ -207,8 +228,8 @@ function matchesSendLabel(el) {
   return false;
 }
 
+// Locate a usable send button near the input or globally as fallback.
 function findSendButton(startEl) {
-  console.log("🚀 ~ findSendButton ~ startEl:", startEl)
   if (window.location.host.includes("gemini.google.com")) {
     const geminiBtn =
       document.querySelector("button.send-button") ||
@@ -231,12 +252,11 @@ function findSendButton(startEl) {
     const buttons = Array.from(
       root.querySelectorAll("button, [role='button'], input[type='submit']")
     ).filter((btn) => isVisible(btn) && !btn.disabled);
-    console.log("🚀 ~ findSendButton ~ buttons:", buttons)
 
     const submitButton = buttons.find(
       (btn) => btn.tagName === "BUTTON" && btn.getAttribute("type") === "submit"
     );
-    console.log("🚀 ~ findSendButton ~ submitButton:", submitButton)
+
     if (submitButton) return submitButton;
 
     const labeled = buttons.find(matchesSendLabel);
@@ -252,6 +272,7 @@ function findSendButton(startEl) {
   return null;
 }
 
+// Dispatch Enter keypress as a fallback send action.
 function dispatchEnter(el) {
   el.focus();
   const eventInit = {
@@ -267,6 +288,7 @@ function dispatchEnter(el) {
   el.dispatchEvent(new KeyboardEvent("keyup", eventInit));
 }
 
+// Orchestrate input + send with retries.
 async function attemptSend(text) {
   for (let i = 0; i < RETRY_COUNT; i += 1) {
     const candidate = findInputCandidate();
@@ -279,8 +301,7 @@ async function attemptSend(text) {
     setText(el, kind, text);
     await sleep(300);
 
-    const isGemini = window.location.host.includes("gemini.google.com");
-    const sendButton = await waitForSendButton(el, isGemini ? 8 : 3, 300);
+    const sendButton = await waitForSendButton(el, 8, 300);
     if (sendButton) {
       sendButton.click();
       return { ok: true };
@@ -293,6 +314,7 @@ async function attemptSend(text) {
   return { ok: false, error: "Input not found" };
 }
 
+// Handle popup requests to send text.
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (!message || message.type !== "ASKALL_SEND") return;
 

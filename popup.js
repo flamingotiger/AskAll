@@ -4,6 +4,7 @@ const statusEl = document.getElementById("status");
 const DRAFT_KEY = "askall_draft";
 const TARGETS_KEY = "askall_targets";
 
+// Cache target checkbox elements for quick access.
 const targetEls = {
   chatgpt: document.getElementById("target-chatgpt"),
   claude: document.getElementById("target-claude"),
@@ -11,6 +12,7 @@ const targetEls = {
   gemini: document.getElementById("target-gemini")
 };
 
+// Full URL list used when no target is selected.
 const TARGET_URLS = [
   "https://chatgpt.com/*",
   "https://claude.ai/*",
@@ -18,6 +20,7 @@ const TARGET_URLS = [
   "https://gemini.google.com/*"
 ];
 
+// Map target keys to URL patterns.
 const TARGET_MAP = {
   chatgpt: "https://chatgpt.com/*",
   claude: "https://claude.ai/*",
@@ -25,19 +28,23 @@ const TARGET_MAP = {
   gemini: "https://gemini.google.com/*"
 };
 
+// Update UI status text with result counts.
 function setStatus(successCount, failCount) {
   statusEl.textContent = `Success: ${successCount} / Fail: ${failCount}`;
 }
 
+// Collect selected target keys from checkboxes.
 function selectedTargets() {
   return Object.keys(targetEls).filter((key) => targetEls[key].checked);
 }
 
+// Persist target selection in local storage.
 function saveTargets() {
   const selected = selectedTargets();
   chrome.storage.local.set({ [TARGETS_KEY]: selected });
 }
 
+// Restore target selection from local storage (default to all).
 function loadTargets() {
   chrome.storage.local.get([TARGETS_KEY], (res) => {
     const saved = Array.isArray(res[TARGETS_KEY]) ? res[TARGETS_KEY] : [];
@@ -48,10 +55,12 @@ function loadTargets() {
   });
 }
 
+// Persist draft text between popup openings.
 function saveDraft(value) {
   chrome.storage.local.set({ [DRAFT_KEY]: value });
 }
 
+// Restore draft text when popup loads.
 function loadDraft() {
   chrome.storage.local.get([DRAFT_KEY], (res) => {
     const draft = typeof res[DRAFT_KEY] === "string" ? res[DRAFT_KEY] : "";
@@ -59,6 +68,7 @@ function loadDraft() {
   });
 }
 
+// Query tabs matching selected target URL patterns.
 async function queryTargetTabs() {
   const selected = selectedTargets();
   const urls = selected.length
@@ -67,6 +77,7 @@ async function queryTargetTabs() {
   return chrome.tabs.query({ url: urls });
 }
 
+// Send message to a content script and normalize the response.
 async function sendToTab(tabId, text) {
   return new Promise((resolve) => {
     chrome.tabs.sendMessage(tabId, { type: "ASKALL_SEND", text }, (resp) => {
