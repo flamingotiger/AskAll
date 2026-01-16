@@ -131,6 +131,112 @@ function moveCaretToEnd(el) {
   }
 }
 
+// Build paragraph nodes to preserve line breaks in contenteditable editors.
+function buildParagraphNodes(text) {
+  return text.split(/\r?\n/).map((line) => {
+    const p = document.createElement("p");
+    if (line.length === 0) {
+      p.appendChild(document.createElement("br"));
+    } else {
+      p.textContent = line;
+    }
+    return p;
+  });
+}
+
+// Build Lexical-compatible nodes for Perplexity.
+function buildLexicalNodes(text) {
+  return text.split(/\r?\n/).map((line) => {
+    const p = document.createElement("p");
+    p.setAttribute("dir", "auto");
+    if (line.length === 0) {
+      p.appendChild(document.createElement("br"));
+    } else {
+      const span = document.createElement("span");
+      span.setAttribute("data-lexical-text", "true");
+      span.textContent = line;
+      p.appendChild(span);
+    }
+    return p;
+  });
+}
+
+// ChatGPT-focused insertion for ProseMirror.
+function setChatGPTText(el, text) {
+  dispatchBeforeInputEvent(el, text);
+  let inserted = false;
+  if (typeof document.execCommand === "function") {
+    try {
+      document.execCommand("selectAll", false, null);
+      inserted = document.execCommand("insertText", false, text);
+    } catch (_err) {
+      inserted = false;
+    }
+  }
+
+  if (!inserted) {
+    el.replaceChildren(...buildParagraphNodes(text));
+  }
+
+  moveCaretToEnd(el);
+  dispatchInputEvent(el);
+  el.dispatchEvent(new Event("change", { bubbles: true }));
+}
+
+// Perplexity-focused insertion with change propagation.
+function setPerplexityText(el, text) {
+  el.focus({ preventScroll: true });
+  try {
+    el.dispatchEvent(new FocusEvent("focus", { bubbles: false }));
+    el.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
+  } catch (_err) {
+    // Ignore focus event construction errors in older browsers.
+  }
+
+  const before = el.textContent || "";
+  const sel = window.getSelection();
+  if (sel) {
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    sel.removeAllRanges();
+    sel.addRange(range);
+  }
+
+  let commandInserted = false;
+  if (typeof document.execCommand === "function") {
+    try {
+      document.execCommand("selectAll", false, null);
+      commandInserted = document.execCommand("insertText", false, text);
+    } catch (_err) {
+      // Ignore command errors; fall back below.
+    }
+    const after = (el.textContent || "").trim();
+    const target = text.trim();
+    const hasLexical = !!el.querySelector("[data-lexical-text]");
+    if (!commandInserted && after && after === target && hasLexical) {
+      commandInserted = true;
+    }
+  }
+
+  if (!commandInserted) {
+    el.replaceChildren(...buildLexicalNodes(text));
+  }
+
+  moveCaretToEnd(el);
+  el.dispatchEvent(new Event("input", { bubbles: true }));
+  el.dispatchEvent(new Event("change", { bubbles: true }));
+
+  const form = el.closest("form");
+  if (form) {
+    form.dispatchEvent(new Event("input", { bubbles: true }));
+    form.dispatchEvent(new Event("change", { bubbles: true }));
+  }
+  if (el.parentElement) {
+    el.parentElement.dispatchEvent(new Event("input", { bubbles: true }));
+    el.parentElement.dispatchEvent(new Event("change", { bubbles: true }));
+  }
+}
+
 // Insert text into textarea/input/contenteditable with editor-friendly events.
 function setText(el, kind, text) {
   el.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
@@ -145,6 +251,16 @@ function setText(el, kind, text) {
   }
 
   if (kind === "contenteditable") {
+    const host = window.location.host;
+    if (host.includes("chatgpt.com")) {
+      setChatGPTText(el, text);
+      return;
+    }
+    if (host.includes("perplexity.ai")) {
+      setPerplexityText(el, text);
+      return;
+    }
+
     const isGeminiEditor =
       window.location.host.includes("gemini.google.com") &&
       (el.classList.contains("ql-editor") || el.closest("rich-textarea")); 
@@ -230,12 +346,30 @@ function matchesSendLabel(el) {
 
 // Locate a usable send button near the input or globally as fallback.
 function findSendButton(startEl) {
+  if (window.location.host.includes("chatgpt.com")) {
+    const gptBtn =
+      document.querySelector("button[data-testid='send-button']") ||
+      document.querySelector("button[aria-label*='Send']") ||
+      document.querySelector("button[aria-label*='send']");
+    if (gptBtn && isVisible(gptBtn) && !gptBtn.disabled) return gptBtn;
+  }
+
   if (window.location.host.includes("gemini.google.com")) {
     const geminiBtn =
       document.querySelector("button.send-button") ||
       document.querySelector("button[aria-label*='메시지 보내기']") ||
       document.querySelector("button[aria-label*='send']");
     if (geminiBtn && isVisible(geminiBtn) && !geminiBtn.disabled) return geminiBtn;
+  }
+
+  if (window.location.host.includes("perplexity.ai")) {
+    const pplxBtn =
+      document.querySelector("button[aria-label='Submit']") ||
+      document.querySelector("button[aria-label*='Submit']") ||
+      document.querySelector("button[aria-label*='Send']") ||
+      document.querySelector("button[aria-label*='send']") ||
+      document.querySelector("button[type='submit']");
+    if (pplxBtn && isVisible(pplxBtn) && !pplxBtn.disabled) return pplxBtn;
   }
 
   const roots = [];
